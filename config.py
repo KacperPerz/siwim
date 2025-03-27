@@ -25,6 +25,14 @@ from sklearn.metrics._classification import (
     recall_score,
     zero_one_loss,
 )
+from sklearn.metrics import (
+    precision_recall_curve,
+    roc_curve,
+    auc,
+    roc_auc_score,
+    average_precision_score,
+)
+
 
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
@@ -51,6 +59,11 @@ ALLOWED_SCORING_FUNCTIONS = {
     precision_score,
     recall_score,
     zero_one_loss,
+    precision_recall_curve,
+    roc_curve,
+    auc,
+    roc_auc_score,
+    average_precision_score,
 }
 
 
