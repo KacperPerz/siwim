@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "catboost>=1.2.5",
+    "imblearn>=0.0",
     "ipykernel>=6.29.5",
     "matplotlib>=3.10.1",
     "numpy==1.26",
@@ -14,6 +15,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "ruff>=0.11.2",
     "scikit-learn>=1.6.1",
+    "scipy>=1.15.2",
     "seaborn>=0.13.2",
     "xlrd>=2.0.1",
 ]

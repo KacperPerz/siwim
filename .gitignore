@@ -2,7 +2,8 @@ uv.lock
 .python-version
 __pycache__
 data/
-catboost_info/*
+**/catboost_info/**
+
 *.txt
 *.csv
 *.png

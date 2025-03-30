@@ -51,48 +51,38 @@ class ClassifierEvaluator:
         """Find threshold based on sensitivity or specificity target."""
         fpr, tpr, thresholds = roc_curve(y_true, y_scores)
         if criterion == "sensitivity":
-            # Find threshold where sensitivity (TPR) >= target_value
             valid_indices = np.where(tpr >= target_value)[0]
             if len(valid_indices) > 0:
-                # Get the smallest threshold that meets the criterion
                 idx = valid_indices[0]
                 return thresholds[idx]
             else:
-                # If no threshold meets the criterion, return minimum threshold
                 return min(thresholds)
         elif criterion == "specificity":
-            # Find threshold where specificity (1-FPR) >= target_value
             specificity = 1 - fpr
             valid_indices = np.where(specificity >= target_value)[0]
             if len(valid_indices) > 0:
-                # Get the largest threshold that meets the criterion
                 idx = valid_indices[-1]
                 return thresholds[idx]
             else:
-                # If no threshold meets the criterion, return maximum threshold
                 return max(thresholds)
 
     def _calculate_metrics(
         self, y_true, y_pred_proba, medium_threshold, high_threshold
     ):
         """Calculate FNR, FPR and classification percentages."""
-        # Apply thresholds to classify
         y_pred_medium = (y_pred_proba >= medium_threshold).astype(int)
         y_pred_high = (y_pred_proba >= high_threshold).astype(int)
 
-        # For medium risk threshold (sensitivity >= 99%)
         tn_medium = np.sum((y_true == 0) & (y_pred_medium == 0))
         fp_medium = np.sum((y_true == 0) & (y_pred_medium == 1))
         fn_medium = np.sum((y_true == 1) & (y_pred_medium == 0))
         tp_medium = np.sum((y_true == 1) & (y_pred_medium == 1))
 
-        # For high risk threshold (specificity >= 90%)
         tn_high = np.sum((y_true == 0) & (y_pred_high == 0))
         fp_high = np.sum((y_true == 0) & (y_pred_high == 1))
         fn_high = np.sum((y_true == 1) & (y_pred_high == 0))
         tp_high = np.sum((y_true == 1) & (y_pred_high == 1))
 
-        # Calculate FNR and FPR
         fnr_medium = (
             fn_medium / (fn_medium + tp_medium) if (fn_medium + tp_medium) > 0 else 0
         )
@@ -102,7 +92,6 @@ class ClassifierEvaluator:
         fnr_high = fn_high / (fn_high + tp_high) if (fn_high + tp_high) > 0 else 0
         fpr_high = fp_high / (fp_high + tn_high) if (fp_high + tn_high) > 0 else 0
 
-        # Calculate percentages of examples classified as negative and positive
         y_classified = np.zeros_like(y_true, dtype=int) - 1  # -1 for gray area
         y_classified[y_pred_proba < medium_threshold] = 0  # Negative
         y_classified[y_pred_proba >= high_threshold] = 1  # Positive
@@ -122,29 +111,23 @@ class ClassifierEvaluator:
     def _get_positive_class_proba(self, model, X):
         """Extract probability for the positive class."""
         proba = model.predict_proba(X)
-        # For binary classification, return the probability of class 1
         if proba.shape[1] > 1:
             return proba[:, 1]
-        # For single class output (rare), return as is
         return proba.ravel()
 
     def evaluate_with_super_classifier(self, X, y):
         """Evaluate models using SuperClassifier with repeated stratified k-fold cross-validation."""
 
-        # Create testing config
         testing_config = TestingConfig(
             models=[self.baseline_config, self.target_config],
             random_state=self.random_state,
             verbose=True,
         )
 
-        # Create SuperClassifier
         super_clf = SuperClassifier(testing_config)
 
-        # Fit and evaluate models
         super_clf.fit_evaluate(X, y)
 
-        # Perform custom evaluation with repeated stratified k-fold
         rskf = RepeatedStratifiedKFold(
             n_splits=5, n_repeats=3, random_state=self.random_state
         )
@@ -155,14 +138,11 @@ class ClassifierEvaluator:
             X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
             y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
-            # Evaluate baseline model - get probability for positive class
             baseline_proba = self._get_positive_class_proba(baseline_model, X_test)
 
-            # Calculate AUROC and AUPRC for baseline
             baseline_auroc = roc_auc_score(y_test, baseline_proba)
             baseline_auprc = average_precision_score(y_test, baseline_proba)
 
-            # Find thresholds on training set for baseline
             baseline_train_proba = self._get_positive_class_proba(
                 baseline_model, X_train
             )
@@ -173,7 +153,6 @@ class ClassifierEvaluator:
                 y_train, baseline_train_proba, "specificity", 0.90
             )
 
-            # Calculate metrics for baseline
             baseline_metrics = self._calculate_metrics(
                 y_test,
                 baseline_proba,
@@ -181,20 +160,16 @@ class ClassifierEvaluator:
                 baseline_high_threshold,
             )
 
-            # Store baseline results
             self.results["baseline"]["auprc"].append(baseline_auprc)
             self.results["baseline"]["auroc"].append(baseline_auroc)
             for key, value in baseline_metrics.items():
                 self.results["baseline"][key].append(value)
 
-            # Evaluate target model - get probability for positive class
             target_proba = self._get_positive_class_proba(target_model, X_test)
 
-            # Calculate AUROC and AUPRC for target
             target_auroc = roc_auc_score(y_test, target_proba)
             target_auprc = average_precision_score(y_test, target_proba)
 
-            # Find thresholds on training set for target
             target_train_proba = self._get_positive_class_proba(target_model, X_train)
             target_medium_threshold = self._find_threshold(
                 y_train, target_train_proba, "sensitivity", 0.99
@@ -203,12 +178,10 @@ class ClassifierEvaluator:
                 y_train, target_train_proba, "specificity", 0.90
             )
 
-            # Calculate metrics for target
             target_metrics = self._calculate_metrics(
                 y_test, target_proba, target_medium_threshold, target_high_threshold
             )
 
-            # Store target results
             self.results["target"]["auprc"].append(target_auprc)
             self.results["target"]["auroc"].append(target_auroc)
             for key, value in target_metrics.items():
